@@ -1,0 +1,10 @@
+---
+description: 本仓库以 docs/ 为规格；未进入第二步前不要写业务代码
+alwaysApply: true
+---
+
+编码与产品行为以 `docs/` 和 `AGENTS.md` 为准。
+
+当前阶段：只维护 Markdown 需求、规则与 `knowledge/`。用户未宣布开始第二步时，不要创建应用骨架或安装运行时依赖。对照 `07-ui-ux.md` 的静态页 `prototype/index.html` 除外。
+
+开始写代码后：先改文档再改实现；知识内容只放在 `knowledge/`。
