@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: knowledge-app
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  mvc:
+    problemdetails:
+      enabled: false
+
+server:
+  port: ${PORT:8080}
+
+app:
+  knowledge-root: ${KNOWLEDGE_ROOT:}
+  index-dir: ${INDEX_DIR:}
+  llm:
+    provider: ${LLM_PROVIDER:}
+    model: ${LLM_MODEL:}
+    api-key: ${LLM_API_KEY:}
+    base-url: ${LLM_BASE_URL:}
+    timeout: 90s
+  qa:
+    show-retrieval: ${QA_SHOW_RETRIEVAL:true}
+    top-k: 8
+    max-history-turns: 10
+  retrieval:
+    min-score: ${RETRIEVAL_MIN_SCORE:0.5}

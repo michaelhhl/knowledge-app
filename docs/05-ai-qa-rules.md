@@ -34,9 +34,15 @@
   "citations": [
     { "file": "foo.md", "heading": "某节", "score": 0.0 }
   ],
-  "related": [{ "file": "bar.md", "title": "相近文档" }]
+  "related": [{ "file": "bar.md", "title": "相近文档" }],
+  "retrieval": [{ "file": "foo.md", "heading": "某节", "score": 0.0 }]
 }
 ```
+
+- `retrieval`：本次检索命中的片段摘要（FR-07），由后端填写，不由模型生成；`QA_SHOW_RETRIEVAL=false` 时为空数组。
+- 模型只需返回 `answer_status`、`answer_markdown`、`citations`（`file` + `heading`）；`score`、`related` 由后端根据检索结果补全。
+- 检索后没有任何片段达到阈值时，不调用模型，直接返回 `insufficient`。
+- 模型给出的 citation 若不在本次提供的片段中，GroundingCheck 予以丢弃；丢弃后 `grounded` 无剩余 citation 则改为 `insufficient`。
 
 - `grounded`：有至少一条 citation，且答案中的硬事实能在片段中找到支持。
 - `insufficient`：`answer_markdown` 说明缺什么；`citations` 可空；`related` 可填相近文档。

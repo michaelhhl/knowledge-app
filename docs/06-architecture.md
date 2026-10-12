@@ -1,6 +1,6 @@
 # 目标架构
 
-第一版应用骨架尚未编写。仓库内 `prototype/index.html` 仅用于对照 `07-ui-ux.md`，不视为已选技术，也不替代下列模块。本文约束第二步的模块划分，避免把逻辑堆在一个脚本里。
+本文约束第二步的模块划分，避免把逻辑堆在一个脚本里。仓库内 `prototype/index.html` 仅用于对照 `07-ui-ux.md`，不视为正式前端，也不替代下列模块。
 
 ## 形态
 
@@ -47,6 +47,23 @@ UI  →  QA API  →  QueryPlanner  →  Retriever  →  Index
 - 问答响应遵循 `05-ai-qa-rules.md` 的结构化 JSON。
 - 第一版不内置默认 LLM 提供商；未配置 LLM 时，知识浏览、索引与检索可用，问答 API 返回配置缺失错误。
 
+| 方法与路径 | 用途 |
+|------------|------|
+| `GET /api/knowledge/toc` | `_index.md` 目录中已发布的条目，以及空知识库标识 |
+| `GET /api/knowledge/docs` | 全部已发布文档（含未列入目录者） |
+| `GET /api/knowledge/doc?path=` | 单篇已发布文档的元数据与 Markdown 正文（不含 front matter） |
+| `POST /api/qa/ask` | 问答；请求含 `question` 与可选 `history` |
+| `GET /api/qa/status` | LLM 是否已配置（不返回密钥或模型地址） |
+| `GET /api/index/status` | 索引状态；含 `stale`：知识源相对当前索引是否已变化 |
+| `POST /api/index/rebuild` | 手动全量重建 |
+
+稳定错误码：`VALIDATION_ERROR`（400）、`INVALID_PATH`（400）、`DOC_NOT_FOUND`（404）、`NOT_FOUND`（404，未知 API 路径）、`LLM_NOT_CONFIGURED`（503）、`INDEX_NOT_READY`（503）、`LLM_ERROR`（502）、`LLM_INVALID_RESPONSE`（502）、`INDEX_REBUILD_FAILED`（500）、`INTERNAL_ERROR`（500）。
+
+## 会话
+
+- 会话历史只保存在浏览器内存；每次问答请求携带最近至多 10 轮（FR-08）。「新会话」清空历史。后端不保存会话。
+- QueryPlanner 第一版为规则改写：问题含指代词（如「这个」「上一份」「它」）或过短时，把上一轮问题拼入检索查询。
+
 ## 知识文件访问安全
 
 - API 只接受相对于 `KNOWLEDGE_ROOT` 的知识路径，拒绝绝对路径、盘符与 `..` 路径段。
@@ -63,7 +80,14 @@ UI  →  QA API  →  QueryPlanner  →  Retriever  →  Index
 | `LLM_PROVIDER` | 提供商标识 |
 | `LLM_MODEL` | 模型名 |
 | `LLM_API_KEY` | 密钥 |
+| `LLM_BASE_URL` | 提供商 API 根地址，如 `https://api.openai.com/v1` 或本地 `http://localhost:11434/v1` |
 | `INDEX_DIR` | 索引入库路径 |
+| `QA_SHOW_RETRIEVAL` | 是否在问答响应中返回检索摘要（FR-07），默认 `true` |
+| `RETRIEVAL_MIN_SCORE` | BM25 分数阈值，低于该值视为无依据，默认 `0.5` |
+
+- `LLM_PROVIDER` 第一版支持 `openai-compatible`（OpenAI Chat Completions 兼容接口，可对接 OpenAI、DeepSeek、Ollama 等）。四个 `LLM_*` 变量全部填写才视为已配置。
+- 后端启动时读取进程环境变量，以及工作目录或其上一级目录中的 `.env`（`KEY=VALUE` 格式）。
+- 未设置 `KNOWLEDGE_ROOT` 时，依次尝试工作目录下的 `knowledge/` 与上一级的 `knowledge/`；未设置 `INDEX_DIR` 时，使用知识根目录同级的 `.local/index/`。
 
 提供 `.env.example`，不提供填好密钥的 `.env`。
 
@@ -75,3 +99,6 @@ UI  →  QA API  →  QueryPlanner  →  Retriever  →  Index
 - **检索：** 第一版使用 Apache Lucene BM25；第二版再评估 embedding 与混合检索。
 - **LLM：** 业务层定义独立提供商接口，不绑定唯一厂商；第一版不设置默认提供商，通过环境变量显式启用。
 - **仓库目录：** `frontend/`、`backend/`、`knowledge/`、`docs/`、`prototype/`；运行时索引位于不入库的 `.local/`。
+- **前端打包：** Maven `prod` profile 通过 `frontend-maven-plugin` 在 `frontend/node/` 下载项目私有的 Node.js（不入库）并执行构建；默认构建与后端测试不需要 Node.js。
+- **中文分词：** Lucene `SmartChineseAnalyzer`，附加停用词表 `backend/src/main/resources/stopwords-zh.txt`（虚词、疑问词），避免「的」「是」之类的字让库外问题误命中。修改分析器或停用词时须提升索引 schema 版本，使旧索引在启动时自动重建。
+- **Markdown 渲染：** 前端 `react-markdown` + `remark-gfm`，不渲染原始 HTML。
